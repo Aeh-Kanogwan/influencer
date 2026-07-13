@@ -38,3 +38,11 @@
 - **ขนาดไฟล์:** ไฟล์ถูกส่งผ่าน API แบบ base64 เหมาะกับไฟล์ไม่ใหญ่มาก (แนะนำ < ~15–20 MB/ไฟล์) ไฟล์ใหญ่ควรใช้ลิงก์ Drive แทน
 - **แก้โค้ด Apps Script แล้ว** ต้อง **Deploy → Manage deployments → แก้ไข (ดินสอ) → Version: New version → Deploy** เพื่อให้ URL เดิมอัปเดต
 - ถ้าเปลี่ยน URL ใหม่ ให้กด "ตั้งค่าการเชื่อมต่อ" ที่หน้า login เพื่อวาง URL ใหม่
+
+## แก้ปัญหา (Troubleshooting)
+- **ขึ้น `unauthorized` ตอนสร้าง user / อัปโหลดไฟล์:** โค้ด Apps Script ที่รันอยู่ยังเป็นเวอร์ชันเก่า
+  1. วางโค้ด `Code.gs` ล่าสุด (ฟังก์ชัน `requireAdmin` ต้องเช็ค `b.au` ไม่ใช่ `b.username`) → Save
+  2. **Deploy → Manage deployments → ดินสอ ✏️ → Version: New version → Deploy**
+  3. *แค่กด Save ไม่พอ* Web App จะรันโค้ดเก่าจนกว่าจะสร้าง New version
+- **`รูปแบบผลลัพธ์จาก API ไม่ถูกต้อง`:** ตอน Deploy ตั้ง "Who has access" ไม่ใช่ **Anyone** หรือ URL ผิด
+- **`เชื่อมต่อ API ไม่ได้`:** URL ไม่ถูก/ยังไม่ได้ Deploy หรือเน็ตบล็อก script.google.com
