@@ -1,4 +1,4 @@
-# ant-infu — File Distribution Hub
+# ant-influencer — File Distribution Hub
 
 ระบบแจกจ่ายไฟล์ที่จัดการโดยผู้ดูแล พร้อมสิทธิ์การดาวน์โหลดรายบุคคล — พัฒนาด้วย **React + Vite** และ **ไม่ต้องใช้ฐานข้อมูล**
 

@@ -20,7 +20,7 @@ export default function Login() {
         <div className="brand" style={{ justifyContent: 'center' }}>
           <div className="brand-mark">aI</div>
           <div>
-            <div className="brand-name">ant-infu</div>
+            <div className="brand-name">ant-influencer</div>
             <div className="brand-sub">File Distribution Hub</div>
           </div>
         </div>
