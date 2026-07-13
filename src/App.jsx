@@ -16,7 +16,7 @@ function Topbar() {
       </div>
       <div className="topbar-user">
         <span className="role-chip">{session.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน'}</span>
-        <span className="label-md muted">{session.username}</span>
+        <span className="label-md muted topbar-username">{session.username}</span>
         <button className="btn btn-ghost btn-sm" onClick={logout}>ออกจากระบบ</button>
       </div>
     </div>

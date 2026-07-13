@@ -61,7 +61,7 @@ export default function UsersTab() {
         <h3 className="headline-md">ผู้ใช้งานทั้งหมด ({users.length})</h3>
         {users.length === 0 && <div className="empty">ยังไม่มีผู้ใช้ — สร้างด้านบน</div>}
         {users.length > 0 && (
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="card table-wrap" style={{ padding: 0 }}>
             <table className="table">
               <thead>
                 <tr>

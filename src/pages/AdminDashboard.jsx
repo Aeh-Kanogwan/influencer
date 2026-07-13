@@ -15,7 +15,7 @@ export default function AdminDashboard() {
           <h1 className="headline-lg">แผงควบคุมผู้ดูแล</h1>
           <p className="muted body-md" style={{ marginTop: 4 }}>สร้าง Master ประเภทไฟล์ อัปโหลดไฟล์ และจัดการสิทธิ์ผู้ใช้</p>
         </div>
-        <div className="row">
+        <div className="row header-actions">
           <button className={`btn ${tab === 'masters' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setTab('masters')}>＋ สร้าง Master</button>
           <button className={`btn ${tab === 'users' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('users')}>＋ สร้างผู้ใช้</button>
         </div>

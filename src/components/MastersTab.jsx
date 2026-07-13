@@ -85,6 +85,7 @@ export default function MastersTab() {
             {m.files.length === 0 ? (
               <div className="empty" style={{ padding: 24 }}>ยังไม่มีไฟล์ในหมวดนี้</div>
             ) : (
+              <div className="table-wrap">
               <table className="table">
                 <thead>
                   <tr><th>ชื่อไฟล์</th><th>ขนาด</th><th>อัปโหลดเมื่อ</th><th style={{ textAlign: 'right' }}>จัดการ</th></tr>
@@ -110,6 +111,7 @@ export default function MastersTab() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         ))}
