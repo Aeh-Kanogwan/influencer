@@ -243,8 +243,37 @@ h1, h2, h3, h4 { font-family: var(--font-head); margin: 0; letter-spacing: -0.01
 .switch.on { background: var(--secondary-container); }
 .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: .2s; box-shadow: var(--shadow-2); }
 .switch.on::after { left: 20px; }
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: grid; place-items: center; z-index: 50; padding: 20px; }
-.modal { background: var(--surface-container-lowest); border-radius: var(--radius-xl); box-shadow: var(--shadow-3); padding: 28px; width: 100%; max-width: 560px; max-height: 90vh; overflow: auto; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: grid; place-items: center; z-index: 50; padding: 20px; }
+.modal {
+  background: var(--surface-container-lowest); border-radius: var(--radius-xl); box-shadow: var(--shadow-3);
+  width: 100%; max-width: 560px; max-height: 85vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.modal-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 20px 24px; border-bottom: 1px solid var(--outline-variant);
+}
+.modal-scroll {
+  overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1;
+  padding: 16px 24px; display: flex; flex-direction: column; gap: 12px;
+}
+.modal-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 24px; border-top: 1px solid var(--outline-variant);
+}
+.modal-close {
+  width: 32px; height: 32px; border-radius: var(--radius-full); border: none; flex-shrink: 0;
+  background: var(--surface-container-high); color: var(--on-surface-variant); cursor: pointer; font-size: 15px; line-height: 1;
+}
+.modal-close:hover { background: var(--surface-container-highest); }
+.sheet-handle { display: none; }
+/* permission list rows */
+.perm-group { padding: 12px 14px; }
+.perm-master { padding: 2px 0 8px; border-bottom: 1px solid var(--outline-variant); margin-bottom: 6px; }
+.perm-file { padding: 4px 0 4px 20px; }
+.perm-name { min-width: 0; word-break: break-word; flex: 1; }
+.perm-size { margin-left: auto; font-size: 12px; white-space: nowrap; }
+.file-icon-sm { width: 30px; height: 30px; font-size: 10px; }
 .error-text { color: var(--error); font-size: 13px; }
 
 /* ---------- Loading ---------- */
@@ -306,12 +335,17 @@ h1, h2, h3, h4 { font-family: var(--font-head); margin: 0; letter-spacing: -0.01
   /* Modal becomes a bottom sheet — fits small screens, easier to reach */
   .modal-overlay { padding: 0; align-items: end; }
   .modal {
-    max-width: 100%; width: 100%; max-height: 92vh; padding: 18px;
+    max-width: 100%; width: 100%; max-height: 88vh;
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   }
-  .modal .headline-md { font-size: 19px; }
-  /* checkbox rows: let long file names wrap instead of overflowing */
-  .checkbox-row { flex-wrap: wrap; align-items: center; gap: 8px; }
-  .checkbox-row span:not(.chip):not(.file-icon) { min-width: 0; word-break: break-word; flex: 1; }
-  .checkbox-row .file-icon { width: 28px; height: 28px; font-size: 9px; }
+  .sheet-handle { display: block; width: 40px; height: 4px; border-radius: 999px; background: var(--surface-dim); margin: 8px auto 0; }
+  .modal-head { padding: 12px 16px 14px; }
+  .modal-scroll { padding: 12px 16px; gap: 10px; }
+  .modal-foot { padding: 12px 16px; }
+  .modal .headline-md { font-size: 18px; }
+  .perm-group { padding: 10px 12px; }
+  .perm-file { padding-left: 10px; }
+  .file-icon-sm { width: 26px; height: 26px; font-size: 9px; }
+  /* long file names wrap instead of overflowing */
+  .checkbox-row { align-items: center; gap: 8px; }
 }
