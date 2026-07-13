@@ -15,6 +15,10 @@ export default function AdminDashboard() {
           <h1 className="headline-lg">แผงควบคุมผู้ดูแล</h1>
           <p className="muted body-md" style={{ marginTop: 4 }}>สร้าง Master ประเภทไฟล์ อัปโหลดไฟล์ และจัดการสิทธิ์ผู้ใช้</p>
         </div>
+        <div className="row">
+          <button className={`btn ${tab === 'masters' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setTab('masters')}>＋ สร้าง Master</button>
+          <button className={`btn ${tab === 'users' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTab('users')}>＋ สร้างผู้ใช้</button>
+        </div>
       </div>
 
       <div className="grid grid-3">
@@ -24,9 +28,9 @@ export default function AdminDashboard() {
       </div>
 
       <div>
-        <div className="tabs">
-          <button className={`tab ${tab === 'masters' ? 'active' : ''}`} onClick={() => setTab('masters')}>Master &amp; ไฟล์</button>
-          <button className={`tab ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>ผู้ใช้งาน &amp; สิทธิ์</button>
+        <div className="segmented">
+          <button className={`seg ${tab === 'masters' ? 'active' : ''}`} onClick={() => setTab('masters')}>📁 Master &amp; ไฟล์</button>
+          <button className={`seg ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>👥 ผู้ใช้งาน &amp; สิทธิ์</button>
         </div>
         {tab === 'masters' ? <MastersTab /> : <UsersTab />}
       </div>
