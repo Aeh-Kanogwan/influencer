@@ -89,10 +89,6 @@ export default function Login() {
                 {busy ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ'}
               </button>
             </form>
-            <div className="row-between" style={{ fontSize: 13 }}>
-              <span className="muted">Admin เริ่มต้น: <b>admin</b> / <b>admin123</b></span>
-              <button className="btn btn-ghost btn-sm" type="button" onClick={() => { setShowConnect(true); setError('') }}>ตั้งค่าการเชื่อมต่อ</button>
-            </div>
           </>
         )}
       </div>
