@@ -93,7 +93,9 @@ function config() {
 }
 function requireAdmin(b) {
   var c = config();
-  if (b.username !== c.adminUsername || String(b.password) !== String(c.adminPassword)) {
+  // admin creds arrive as au/ap (separate keys) so they never collide with entity
+  // fields such as a new user's username/password in the same request body.
+  if (b.au !== c.adminUsername || String(b.ap) !== String(c.adminPassword)) {
     throw new Error('unauthorized');
   }
 }

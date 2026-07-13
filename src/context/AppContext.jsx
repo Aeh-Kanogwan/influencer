@@ -21,7 +21,10 @@ export function AppProvider({ children }) {
     setTimeout(() => setToast(null), 2800)
   }, [])
 
+  // actor creds (login/userData/download) — the person performing the action
   const auth = useCallback(() => ({ username: session?.username, password: session?.password }), [session])
+  // admin creds for gated mutations — separate keys so they never collide with entity fields (e.g. a new user's username)
+  const admin = useCallback(() => ({ au: session?.username, ap: session?.password }), [session])
 
   // ---------- data loading ----------
   const loadData = useCallback(async (sess) => {
@@ -79,27 +82,27 @@ export function AppProvider({ children }) {
 
   // ---------- masters ----------
   const createMaster = useCallback(async (name, description) => {
-    await call('createMaster', { ...auth(), name, description })
+    await call('createMaster', { ...admin(), name, description })
     await loadData()
-  }, [auth, loadData])
+  }, [admin, loadData])
 
   const deleteMaster = useCallback(async (id) => {
-    await call('deleteMaster', { ...auth(), id })
+    await call('deleteMaster', { ...admin(), id })
     await loadData()
-  }, [auth, loadData])
+  }, [admin, loadData])
 
   const addFilesToMaster = useCallback(async (masterId, fileList) => {
     for (const file of fileList) {
       const dataBase64 = await fileToBase64(file)
-      await call('addFile', { ...auth(), masterId, name: file.name, type: file.type || 'application/octet-stream', size: file.size, dataBase64 })
+      await call('addFile', { ...admin(), masterId, name: file.name, type: file.type || 'application/octet-stream', size: file.size, dataBase64 })
     }
     await loadData()
-  }, [auth, loadData])
+  }, [admin, loadData])
 
   const removeFile = useCallback(async (masterId, fileId) => {
-    await call('removeFile', { ...auth(), id: fileId })
+    await call('removeFile', { ...admin(), id: fileId })
     await loadData()
-  }, [auth, loadData])
+  }, [admin, loadData])
 
   const downloadFile = useCallback(async (fileMeta) => {
     try {
@@ -117,20 +120,20 @@ export function AppProvider({ children }) {
 
   // ---------- users ----------
   const createUser = useCallback(async (data) => {
-    const res = await call('createUser', { ...auth(), username: data.username, password: data.password, note: data.note, allowedFileIds: data.allowedFileIds || [] })
+    const res = await call('createUser', { ...admin(), username: data.username, password: data.password, note: data.note, allowedFileIds: data.allowedFileIds || [] })
     await loadData()
     return res
-  }, [auth, loadData])
+  }, [admin, loadData])
 
   const updateUser = useCallback(async (id, patch) => {
-    await call('updateUser', { ...auth(), id, patch })
+    await call('updateUser', { ...admin(), id, patch })
     await loadData()
-  }, [auth, loadData])
+  }, [admin, loadData])
 
   const deleteUser = useCallback(async (id) => {
-    await call('deleteUser', { ...auth(), id })
+    await call('deleteUser', { ...admin(), id })
     await loadData()
-  }, [auth, loadData])
+  }, [admin, loadData])
 
   const value = {
     session, masters, users, toast, loading, apiUrl, connected: !!apiUrl, notify,
