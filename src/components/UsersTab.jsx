@@ -4,7 +4,7 @@ import { formatDate, fileExt } from '../lib/format.js'
 import PermissionModal from './PermissionModal.jsx'
 
 export default function UsersTab() {
-  const { users, masters, createUser, updateUser, deleteUser, genCredentials, notify } = useApp()
+  const { users, masters, loading, createUser, updateUser, deleteUser, genCredentials, notify } = useApp()
   const [prefix, setPrefix] = useState('user')
   const [note, setNote] = useState('')
   const [lastCreated, setLastCreated] = useState(null)
@@ -73,7 +73,9 @@ export default function UsersTab() {
       {/* Users list */}
       <div className="stack-md" style={{ gridColumn: '1 / -1' }}>
         <h3 className="headline-md">ผู้ใช้งานทั้งหมด ({users.length})</h3>
-        {users.length === 0 && <div className="empty">ยังไม่มีผู้ใช้ — สร้างด้านบน</div>}
+        {users.length === 0 && (loading
+          ? <div className="loading-block"><span className="spinner spinner-lg" />กำลังโหลดข้อมูล…</div>
+          : <div className="empty">ยังไม่มีผู้ใช้ — สร้างด้านบน</div>)}
         {users.length > 0 && (
           <div className="card table-wrap" style={{ padding: 0 }}>
             <table className="table">

@@ -247,6 +247,24 @@ h1, h2, h3, h4 { font-family: var(--font-head); margin: 0; letter-spacing: -0.01
 .modal { background: var(--surface-container-lowest); border-radius: var(--radius-xl); box-shadow: var(--shadow-3); padding: 28px; width: 100%; max-width: 560px; max-height: 90vh; overflow: auto; }
 .error-text { color: var(--error); font-size: 13px; }
 
+/* ---------- Loading ---------- */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--outline-variant); border-top-color: var(--primary);
+  animation: spin .7s linear infinite; display: inline-block; flex-shrink: 0;
+}
+.loading-chip {
+  display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: var(--radius-full);
+  background: var(--surface-container-high); color: var(--on-surface-variant); font-size: 12px; font-weight: 600;
+}
+.loading-block {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 48px 24px; color: var(--on-surface-variant);
+  border: 1px dashed var(--outline-variant); border-radius: var(--radius-lg); background: var(--surface-container-low);
+}
+.spinner-lg { width: 22px; height: 22px; border-width: 3px; }
+
 /* ---------- Mobile responsive ---------- */
 @media (max-width: 768px) {
   .container { padding: 20px 16px; }
@@ -269,4 +287,16 @@ h1, h2, h3, h4 { font-family: var(--font-head); margin: 0; letter-spacing: -0.01
   /* header action buttons go full width so they never overflow */
   .header-actions { width: 100%; }
   .header-actions .btn { flex: 1; justify-content: center; }
+
+  /* Modal becomes a bottom sheet — fits small screens, easier to reach */
+  .modal-overlay { padding: 0; align-items: end; }
+  .modal {
+    max-width: 100%; width: 100%; max-height: 92vh; padding: 18px;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+  .modal .headline-md { font-size: 19px; }
+  /* checkbox rows: let long file names wrap instead of overflowing */
+  .checkbox-row { flex-wrap: wrap; align-items: center; gap: 8px; }
+  .checkbox-row span:not(.chip):not(.file-icon) { min-width: 0; word-break: break-word; flex: 1; }
+  .checkbox-row .file-icon { width: 28px; height: 28px; font-size: 9px; }
 }

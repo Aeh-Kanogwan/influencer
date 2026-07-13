@@ -2,7 +2,7 @@ import { useApp } from '../context/AppContext.jsx'
 import { formatSize, formatDate, fileExt } from '../lib/format.js'
 
 export default function UserDashboard() {
-  const { session, masters, downloadFile } = useApp()
+  const { session, masters, loading, downloadFile } = useApp()
 
   // The API already returns only the masters/files this user is allowed to download.
   const visible = masters
@@ -18,10 +18,14 @@ export default function UserDashboard() {
       </div>
 
       {totalFiles === 0 ? (
-        <div className="empty">
-          ยังไม่มีไฟล์ที่คุณได้รับสิทธิ์ให้ดาวน์โหลด<br />
-          กรุณาติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์การเข้าถึง
-        </div>
+        loading ? (
+          <div className="loading-block"><span className="spinner spinner-lg" />กำลังโหลดข้อมูล…</div>
+        ) : (
+          <div className="empty">
+            ยังไม่มีไฟล์ที่คุณได้รับสิทธิ์ให้ดาวน์โหลด<br />
+            กรุณาติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์การเข้าถึง
+          </div>
+        )
       ) : (
         <div className="stack-lg">
           {visible.map((m) => (

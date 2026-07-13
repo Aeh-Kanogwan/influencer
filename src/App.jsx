@@ -4,7 +4,7 @@ import AdminDashboard from './pages/AdminDashboard.jsx'
 import UserDashboard from './pages/UserDashboard.jsx'
 
 function Topbar() {
-  const { session, logout } = useApp()
+  const { session, logout, loading } = useApp()
   return (
     <div className="topbar">
       <div className="brand">
@@ -15,6 +15,7 @@ function Topbar() {
         </div>
       </div>
       <div className="topbar-user">
+        {loading && <span className="loading-chip"><span className="spinner" />กำลังโหลด…</span>}
         <span className="role-chip">{session.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน'}</span>
         <span className="label-md muted topbar-username">{session.username}</span>
         <button className="btn btn-ghost btn-sm" onClick={logout}>ออกจากระบบ</button>

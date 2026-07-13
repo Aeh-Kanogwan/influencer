@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext.jsx'
 import { formatSize, formatDate, fileExt } from '../lib/format.js'
 
 export default function MastersTab() {
-  const { masters, createMaster, deleteMaster, addFilesToMaster, removeFile, downloadFile, notify } = useApp()
+  const { masters, loading, createMaster, deleteMaster, addFilesToMaster, removeFile, downloadFile, notify } = useApp()
   const [name, setName] = useState('')
   const [desc, setDesc] = useState('')
   const [busy, setBusy] = useState(null)
@@ -65,7 +65,9 @@ export default function MastersTab() {
       {/* List */}
       <div className="stack-md" style={{ gridColumn: '1 / -1' }}>
         <h3 className="headline-md">รายการ Master ({masters.length})</h3>
-        {masters.length === 0 && <div className="empty">ยังไม่มี Master — สร้างรายการแรกด้านบน</div>}
+        {masters.length === 0 && (loading
+          ? <div className="loading-block"><span className="spinner spinner-lg" />กำลังโหลดข้อมูล…</div>
+          : <div className="empty">ยังไม่มี Master — สร้างรายการแรกด้านบน</div>)}
 
         {masters.map((m) => (
           <div key={m.id} className="card stack-md">
