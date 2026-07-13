@@ -10,12 +10,16 @@
 - **จำกัดสิทธิ์ดาวน์โหลด** — เลือกได้ว่าผู้ใช้แต่ละคนโหลดไฟล์ไหนได้บ้างจาก Master ที่มี
 - **ผู้ใช้ login** ด้วย U/P ที่ได้รับ → เห็นและดาวน์โหลดเฉพาะไฟล์ที่ได้รับสิทธิ์
 
-## เก็บข้อมูลไว้ที่ไหน (ไม่ใช้ DB)
-- **localStorage** — เก็บ credential ของ admin, รายการ Master (metadata), รายชื่อผู้ใช้ + สิทธิ์
-- **IndexedDB** — เก็บไฟล์จริง (blob) เพื่อเลี่ยงลิมิต ~5MB ของ localStorage และให้ดาวน์โหลดได้จริง
+## เก็บข้อมูลไว้ที่ไหน — Google Sheets เป็นฐานข้อมูลส่วนกลาง
+ข้อมูลทั้งหมดเก็บส่วนกลาง เพื่อให้ user login จากเครื่องไหนก็ได้:
+- **Google Sheet** — แท็บ `Config` (admin creds), `Users`, `Masters`, `Files` (metadata)
+- **Google Drive** — โฟลเดอร์ `ant-influencer-files` เก็บไฟล์จริง
+- **Google Apps Script (Web App)** — เป็น API ให้ React เรียก (ฟรี ไม่ต้องมี server)
 
-> ทางเลือกอื่นสำหรับเก็บ U/P โดยไม่ใช้ DB: ไฟล์ JSON แบบ static ที่ build มากับแอป, `.env`,
-> หรือไฟล์ config บนเซิร์ฟเวอร์ — แต่ localStorage เหมาะกับ prototype ที่ทำงานในเบราว์เซอร์ล้วนที่สุด
+ดูวิธีตั้งค่าใน **[GOOGLE_SHEET_SETUP.md](GOOGLE_SHEET_SETUP.md)** — โค้ด backend อยู่ที่ `apps-script/Code.gs`
+
+> เดิม prototype เก็บใน localStorage/IndexedDB (ต่อเครื่อง/เบราว์เซอร์) จึงแชร์ข้ามเครื่องไม่ได้
+> จึงเปลี่ยนมาใช้ Google Sheets เพื่อให้ใช้งานจริงได้
 
 ## เริ่มใช้งาน
 ```bash

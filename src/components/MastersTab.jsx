@@ -9,12 +9,24 @@ export default function MastersTab() {
   const [busy, setBusy] = useState(null)
   const fileInputs = useRef({})
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault()
     if (!name.trim()) return
-    createMaster(name, desc)
-    setName(''); setDesc('')
-    notify('สร้าง Master เรียบร้อย')
+    setBusy('create')
+    try {
+      await createMaster(name, desc)
+      setName(''); setDesc('')
+      notify('สร้าง Master เรียบร้อย')
+    } catch (err) {
+      notify('สร้างไม่สำเร็จ: ' + err.message)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const safe = async (fn, okMsg) => {
+    try { await fn(); if (okMsg) notify(okMsg) }
+    catch (err) { notify('ผิดพลาด: ' + err.message) }
   }
 
   const handleUpload = async (masterId, files) => {
@@ -46,7 +58,7 @@ export default function MastersTab() {
             <label>คำอธิบาย (ไม่บังคับ)</label>
             <textarea className="textarea" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="รายละเอียดของหมวดไฟล์นี้" />
           </div>
-          <button className="btn btn-primary" type="submit">+ สร้าง Master</button>
+          <button className="btn btn-primary" type="submit" disabled={busy === 'create'}>{busy === 'create' ? 'กำลังสร้าง…' : '+ สร้าง Master'}</button>
         </form>
       </div>
 
@@ -76,7 +88,7 @@ export default function MastersTab() {
                   {busy === m.id ? 'กำลังอัปโหลด…' : '⬆ อัปโหลดไฟล์'}
                 </button>
                 <button className="btn btn-danger btn-sm"
-                  onClick={() => { if (confirm(`ลบ Master "${m.name}" และไฟล์ทั้งหมด?`)) deleteMaster(m.id) }}>
+                  onClick={() => { if (confirm(`ลบ Master "${m.name}" และไฟล์ทั้งหมด?`)) safe(() => deleteMaster(m.id), 'ลบ Master แล้ว') }}>
                   ลบ
                 </button>
               </div>
@@ -104,7 +116,7 @@ export default function MastersTab() {
                       <td style={{ textAlign: 'right' }}>
                         <div className="row" style={{ justifyContent: 'flex-end' }}>
                           <button className="btn btn-ghost btn-sm" onClick={() => downloadFile(f)}>ดาวน์โหลด</button>
-                          <button className="btn btn-danger btn-sm" onClick={() => { if (confirm('ลบไฟล์นี้?')) removeFile(m.id, f.id) }}>ลบ</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => { if (confirm('ลบไฟล์นี้?')) safe(() => removeFile(m.id, f.id), 'ลบไฟล์แล้ว') }}>ลบ</button>
                         </div>
                       </td>
                     </tr>

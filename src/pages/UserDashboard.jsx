@@ -1,21 +1,11 @@
-import { useMemo } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { formatSize, formatDate, fileExt } from '../lib/format.js'
 
 export default function UserDashboard() {
-  const { session, users, masters, downloadFile } = useApp()
+  const { session, masters, downloadFile } = useApp()
 
-  const me = useMemo(
-    () => users.find((u) => u.id === session.userId) || users.find((u) => u.username === session.username),
-    [users, session]
-  )
-  const allowed = new Set(me?.allowedFileIds || [])
-
-  // Only masters that contain at least one allowed file, filtered to allowed files.
+  // The API already returns only the masters/files this user is allowed to download.
   const visible = masters
-    .map((m) => ({ ...m, files: m.files.filter((f) => allowed.has(f.id)) }))
-    .filter((m) => m.files.length > 0)
-
   const totalFiles = visible.reduce((n, m) => n + m.files.length, 0)
 
   return (

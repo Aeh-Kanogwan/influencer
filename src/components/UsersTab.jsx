@@ -10,14 +10,28 @@ export default function UsersTab() {
   const [lastCreated, setLastCreated] = useState(null)
   const [permTarget, setPermTarget] = useState(null)
 
-  const handleGen = (e) => {
+  const [busy, setBusy] = useState(false)
+
+  const handleGen = async (e) => {
     e.preventDefault()
-    const creds = genCredentials(prefix.trim() || 'user')
-    const u = createUser({ ...creds, note, allowedMasterIds: [], allowedFileIds: [] })
-    setLastCreated({ ...creds })
-    setNote('')
-    notify('สร้างผู้ใช้ใหม่พร้อม username/password แล้ว')
-    setPermTarget(u) // open permission editor right away
+    setBusy(true)
+    try {
+      const creds = genCredentials(prefix.trim() || 'user')
+      const u = await createUser({ ...creds, note, allowedFileIds: [] })
+      setLastCreated({ ...creds })
+      setNote('')
+      notify('สร้างผู้ใช้ใหม่พร้อม username/password แล้ว')
+      setPermTarget(u) // open permission editor right away
+    } catch (err) {
+      notify('สร้างผู้ใช้ไม่สำเร็จ: ' + err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const safe = async (fn, okMsg) => {
+    try { await fn(); if (okMsg) notify(okMsg) }
+    catch (err) { notify('ผิดพลาด: ' + err.message) }
   }
 
   const copyCreds = () => {
@@ -43,7 +57,7 @@ export default function UsersTab() {
             <label>บันทึกช่วยจำ (ไม่บังคับ)</label>
             <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="เช่น ลูกค้า A, ฝ่ายบัญชี" />
           </div>
-          <button className="btn btn-primary" type="submit">⚡ สร้าง & สุ่ม U/P</button>
+          <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? 'กำลังสร้าง…' : '⚡ สร้าง & สุ่ม U/P'}</button>
         </form>
 
         {lastCreated && (
@@ -81,7 +95,7 @@ export default function UsersTab() {
                         : <span className="chip chip-neutral">ยังไม่กำหนด</span>}
                     </td>
                     <td>
-                      <span className="pill-toggle" onClick={() => updateUser(u.id, { enabled: !u.enabled })}>
+                      <span className="pill-toggle" onClick={() => safe(() => updateUser(u.id, { enabled: !u.enabled }), u.enabled ? 'ระงับผู้ใช้แล้ว' : 'เปิดใช้งานผู้ใช้แล้ว')}>
                         <span className={`switch ${u.enabled ? 'on' : ''}`} />
                         <span className={u.enabled ? 'chip' : 'chip chip-off'}>{u.enabled ? 'อนุญาต' : 'ระงับ'}</span>
                       </span>
@@ -90,7 +104,7 @@ export default function UsersTab() {
                     <td style={{ textAlign: 'right' }}>
                       <div className="row" style={{ justifyContent: 'flex-end' }}>
                         <button className="btn btn-secondary btn-sm" onClick={() => setPermTarget(u)}>กำหนดสิทธิ์</button>
-                        <button className="btn btn-danger btn-sm" onClick={() => { if (confirm(`ลบผู้ใช้ ${u.username}?`)) deleteUser(u.id) }}>ลบ</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => { if (confirm(`ลบผู้ใช้ ${u.username}?`)) safe(() => deleteUser(u.id), 'ลบผู้ใช้แล้ว') }}>ลบ</button>
                       </div>
                     </td>
                   </tr>
@@ -105,7 +119,7 @@ export default function UsersTab() {
         <PermissionModal
           user={users.find((x) => x.id === permTarget.id) || permTarget}
           masters={masters}
-          onSave={(patch) => { updateUser(permTarget.id, patch); notify('บันทึกสิทธิ์เรียบร้อย'); setPermTarget(null) }}
+          onSave={(patch) => safe(async () => { await updateUser(permTarget.id, patch); setPermTarget(null) }, 'บันทึกสิทธิ์เรียบร้อย')}
           onClose={() => setPermTarget(null)}
         />
       )}

@@ -1,138 +1,143 @@
-import { createContext, useContext, useState, useCallback } from 'react'
-import * as db from '../lib/storage'
-import { putFile, getFile, deleteFile } from '../lib/idb'
+import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { call, getApiUrl, setApiUrl as persistApiUrl, hasApiUrl, fileToBase64, base64ToBlob } from '../lib/api'
+import { genCredentials } from '../lib/storage'
 
 const Ctx = createContext(null)
 export const useApp = () => useContext(Ctx)
 
+const SESSION_KEY = 'antinfu_session'
+const readSession = () => { try { return JSON.parse(localStorage.getItem(SESSION_KEY)) } catch { return null } }
+
 export function AppProvider({ children }) {
-  const [session, setSessionState] = useState(() => db.getSession())
-  const [masters, setMastersState] = useState(() => db.getMasters())
-  const [users, setUsersState] = useState(() => db.getUsers())
+  const [session, setSession] = useState(() => readSession())
+  const [apiUrl, setApiUrlState] = useState(() => getApiUrl())
+  const [masters, setMasters] = useState([])
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState(null)
 
   const notify = useCallback((msg) => {
     setToast(msg)
-    setTimeout(() => setToast(null), 2600)
+    setTimeout(() => setToast(null), 2800)
   }, [])
 
-  // ---------- Auth ----------
-  const login = useCallback((username, password) => {
-    const admin = db.getAdmin()
-    if (username === admin.username && password === admin.password) {
-      const s = { role: 'admin', username }
-      db.setSession(s); setSessionState(s)
-      return { ok: true, role: 'admin' }
+  const auth = useCallback(() => ({ username: session?.username, password: session?.password }), [session])
+
+  // ---------- data loading ----------
+  const loadData = useCallback(async (sess) => {
+    const s = sess || readSession()
+    if (!s) return
+    setLoading(true)
+    try {
+      if (s.role === 'admin') {
+        const d = await call('adminData', { username: s.username, password: s.password })
+        setMasters(d.masters || [])
+        setUsers(d.users || [])
+      } else {
+        const d = await call('userData', { username: s.username, password: s.password })
+        setMasters(d.masters || [])
+        setUsers([])
+      }
+    } catch (e) {
+      notify(e.message)
+    } finally {
+      setLoading(false)
     }
-    const list = db.getUsers()
-    const u = list.find((x) => x.username === username && x.password === password)
-    if (!u) return { ok: false, error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' }
-    if (!u.enabled) return { ok: false, error: 'บัญชีนี้ถูกระงับการเข้าใช้งาน (limit login)' }
-    const s = { role: 'user', username, userId: u.id }
-    db.setSession(s); setSessionState(s)
-    return { ok: true, role: 'user' }
-  }, [])
-
-  const logout = useCallback(() => {
-    db.setSession(null); setSessionState(null)
-  }, [])
-
-  // ---------- Masters ----------
-  const createMaster = useCallback((name, description) => {
-    const list = db.getMasters()
-    const m = { id: db.uid('mst'), name: name.trim(), description: (description || '').trim(), files: [], createdAt: Date.now() }
-    const next = [m, ...list]
-    db.setMasters(next); setMastersState(next)
-    return m
-  }, [])
-
-  const updateMaster = useCallback((id, patch) => {
-    const next = db.getMasters().map((m) => (m.id === id ? { ...m, ...patch } : m))
-    db.setMasters(next); setMastersState(next)
-  }, [])
-
-  const deleteMaster = useCallback(async (id) => {
-    const m = db.getMasters().find((x) => x.id === id)
-    if (m) for (const f of m.files) await deleteFile(f.id)
-    const next = db.getMasters().filter((x) => x.id !== id)
-    db.setMasters(next); setMastersState(next)
-    // remove references from users
-    const nu = db.getUsers().map((u) => ({
-      ...u,
-      allowedMasterIds: (u.allowedMasterIds || []).filter((x) => x !== id),
-      allowedFileIds: (u.allowedFileIds || []).filter((fid) => !m || !m.files.some((f) => f.id === fid)),
-    }))
-    db.setUsers(nu); setUsersState(nu)
-  }, [])
-
-  const addFilesToMaster = useCallback(async (masterId, fileList) => {
-    const added = []
-    for (const file of fileList) {
-      const id = db.uid('file')
-      await putFile(id, file) // store the raw File/Blob in IndexedDB
-      added.push({ id, name: file.name, size: file.size, type: file.type || 'application/octet-stream', uploadedAt: Date.now() })
-    }
-    const next = db.getMasters().map((m) =>
-      m.id === masterId ? { ...m, files: [...m.files, ...added] } : m
-    )
-    db.setMasters(next); setMastersState(next)
-    return added
-  }, [])
-
-  const removeFile = useCallback(async (masterId, fileId) => {
-    await deleteFile(fileId)
-    const next = db.getMasters().map((m) =>
-      m.id === masterId ? { ...m, files: m.files.filter((f) => f.id !== fileId) } : m
-    )
-    db.setMasters(next); setMastersState(next)
-    const nu = db.getUsers().map((u) => ({ ...u, allowedFileIds: (u.allowedFileIds || []).filter((x) => x !== fileId) }))
-    db.setUsers(nu); setUsersState(nu)
-  }, [])
-
-  const downloadFile = useCallback(async (fileMeta) => {
-    const blob = await getFile(fileMeta.id)
-    if (!blob) { notify('ไม่พบไฟล์ในที่จัดเก็บ'); return }
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = fileMeta.name
-    document.body.appendChild(a); a.click(); a.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }, [notify])
 
-  // ---------- Users ----------
-  const createUser = useCallback((data) => {
-    const list = db.getUsers()
-    const u = {
-      id: db.uid('usr'),
-      username: data.username,
-      password: data.password,
-      note: data.note || '',
-      enabled: true,
-      allowedMasterIds: data.allowedMasterIds || [],
-      allowedFileIds: data.allowedFileIds || [],
-      createdAt: Date.now(),
+  useEffect(() => {
+    if (session && hasApiUrl()) loadData(session)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ---------- connection ----------
+  const connect = useCallback(async (url) => {
+    persistApiUrl(url)
+    setApiUrlState(url)
+    await call('ping') // throws if unreachable
+    return true
+  }, [])
+
+  // ---------- auth ----------
+  const login = useCallback(async (username, password) => {
+    try {
+      const res = await call('login', { username, password })
+      const s = { role: res.role, username, password }
+      localStorage.setItem(SESSION_KEY, JSON.stringify(s))
+      setSession(s)
+      await loadData(s)
+      return { ok: true, role: res.role }
+    } catch (e) {
+      return { ok: false, error: e.message }
     }
-    const next = [u, ...list]
-    db.setUsers(next); setUsersState(next)
-    return u
+  }, [loadData])
+
+  const logout = useCallback(() => {
+    localStorage.removeItem(SESSION_KEY)
+    setSession(null); setMasters([]); setUsers([])
   }, [])
 
-  const updateUser = useCallback((id, patch) => {
-    const next = db.getUsers().map((u) => (u.id === id ? { ...u, ...patch } : u))
-    db.setUsers(next); setUsersState(next)
-  }, [])
+  // ---------- masters ----------
+  const createMaster = useCallback(async (name, description) => {
+    await call('createMaster', { ...auth(), name, description })
+    await loadData()
+  }, [auth, loadData])
 
-  const deleteUser = useCallback((id) => {
-    const next = db.getUsers().filter((u) => u.id !== id)
-    db.setUsers(next); setUsersState(next)
-  }, [])
+  const deleteMaster = useCallback(async (id) => {
+    await call('deleteMaster', { ...auth(), id })
+    await loadData()
+  }, [auth, loadData])
+
+  const addFilesToMaster = useCallback(async (masterId, fileList) => {
+    for (const file of fileList) {
+      const dataBase64 = await fileToBase64(file)
+      await call('addFile', { ...auth(), masterId, name: file.name, type: file.type || 'application/octet-stream', size: file.size, dataBase64 })
+    }
+    await loadData()
+  }, [auth, loadData])
+
+  const removeFile = useCallback(async (masterId, fileId) => {
+    await call('removeFile', { ...auth(), id: fileId })
+    await loadData()
+  }, [auth, loadData])
+
+  const downloadFile = useCallback(async (fileMeta) => {
+    try {
+      const d = await call('download', { ...auth(), fileId: fileMeta.id })
+      const blob = base64ToBlob(d.dataBase64, d.type)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = d.name
+      document.body.appendChild(a); a.click(); a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (e) {
+      notify(e.message)
+    }
+  }, [auth, notify])
+
+  // ---------- users ----------
+  const createUser = useCallback(async (data) => {
+    const res = await call('createUser', { ...auth(), username: data.username, password: data.password, note: data.note, allowedFileIds: data.allowedFileIds || [] })
+    await loadData()
+    return res
+  }, [auth, loadData])
+
+  const updateUser = useCallback(async (id, patch) => {
+    await call('updateUser', { ...auth(), id, patch })
+    await loadData()
+  }, [auth, loadData])
+
+  const deleteUser = useCallback(async (id) => {
+    await call('deleteUser', { ...auth(), id })
+    await loadData()
+  }, [auth, loadData])
 
   const value = {
-    session, masters, users, toast, notify,
-    login, logout,
-    createMaster, updateMaster, deleteMaster, addFilesToMaster, removeFile, downloadFile,
+    session, masters, users, toast, loading, apiUrl, connected: !!apiUrl, notify,
+    connect, login, logout, refresh: loadData,
+    createMaster, deleteMaster, addFilesToMaster, removeFile, downloadFile,
     createUser, updateUser, deleteUser,
-    genCredentials: db.genCredentials,
+    genCredentials,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
