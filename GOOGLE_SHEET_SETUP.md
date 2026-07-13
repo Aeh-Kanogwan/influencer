@@ -39,6 +39,13 @@
 - **แก้โค้ด Apps Script แล้ว** ต้อง **Deploy → Manage deployments → แก้ไข (ดินสอ) → Version: New version → Deploy** เพื่อให้ URL เดิมอัปเดต
 - ถ้าเปลี่ยน URL ใหม่ ให้กด "ตั้งค่าการเชื่อมต่อ" ที่หน้า login เพื่อวาง URL ใหม่
 
+## อัปเดตฟีเจอร์ใหม่ (migration)
+เมื่อมีฟีเจอร์ที่เพิ่มแท็บ/ค่า config (เช่น **จำกัดดาวน์โหลดต่อไฟล์**):
+1. วางโค้ด `Code.gs` ล่าสุดทับ → Save
+2. รัน **`initSheets`** อีกครั้ง — ปลอดภัย ข้อมูลเดิมไม่หาย (จะเพิ่มแท็บ `Downloads` และค่า `maxDownloadsPerFile=3` ให้เอง)
+3. **Deploy → Manage deployments → New version**
+4. รีเฟรชเว็บ → ตั้งค่าจำนวนครั้งได้ในหน้า admin (การ์ด "จำกัดดาวน์โหลดต่อไฟล์")
+
 ## แก้ปัญหา (Troubleshooting)
 - **ขึ้น `unauthorized` ตอนสร้าง user / อัปโหลดไฟล์:** โค้ด Apps Script ที่รันอยู่ยังเป็นเวอร์ชันเก่า
   1. วางโค้ด `Code.gs` ล่าสุด (ฟังก์ชัน `requireAdmin` ต้องเช็ค `b.au` ไม่ใช่ `b.username`) → Save
