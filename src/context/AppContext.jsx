@@ -33,7 +33,8 @@ export function AppProvider({ children }) {
     setLoading(true)
     try {
       if (s.role === 'admin') {
-        const d = await call('adminData', { username: s.username, password: s.password })
+        // adminData is an admin-gated action — send creds under au/ap (not username/password)
+        const d = await call('adminData', { au: s.username, ap: s.password })
         setMasters(d.masters || [])
         setUsers(d.users || [])
       } else {
