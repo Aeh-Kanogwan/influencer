@@ -4,7 +4,7 @@ import AdminDashboard from './pages/AdminDashboard.jsx'
 import UserDashboard from './pages/UserDashboard.jsx'
 
 function Topbar() {
-  const { session, logout, loading } = useApp()
+  const { session, logout, loading, busy } = useApp()
   return (
     <div className="topbar">
       <div className="brand">
@@ -15,7 +15,7 @@ function Topbar() {
         </div>
       </div>
       <div className="topbar-user">
-        {loading && <span className="loading-chip"><span className="spinner" />กำลังโหลด…</span>}
+        {(busy || loading) && <span className="loading-chip"><span className="spinner" />{busy || 'กำลังโหลด…'}</span>}
         <span className="role-chip">{session.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน'}</span>
         <span className="label-md muted topbar-username">{session.username}</span>
         <button className="btn btn-ghost btn-sm" onClick={logout}>ออกจากระบบ</button>
@@ -25,7 +25,7 @@ function Topbar() {
 }
 
 export default function App() {
-  const { session, toast } = useApp()
+  const { session, toast, loading, busy } = useApp()
 
   if (!session) return (
     <>
@@ -36,6 +36,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {(busy || loading) && <div className="top-progress" />}
       <Topbar />
       <div className="container">
         {session.role === 'admin' ? <AdminDashboard /> : <UserDashboard />}

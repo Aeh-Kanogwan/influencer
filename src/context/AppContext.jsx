@@ -13,12 +13,21 @@ export function AppProvider({ children }) {
   const [apiUrl, setApiUrlState] = useState(() => getApiUrl())
   const [masters, setMasters] = useState([])
   const [users, setUsers] = useState([])
+  const [config, setConfig] = useState({ maxDownloadsPerFile: 3 })
   const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState(null)   // message shown while an API request is in flight
   const [toast, setToast] = useState(null)
 
   const notify = useCallback((msg) => {
     setToast(msg)
     setTimeout(() => setToast(null), 2800)
+  }, [])
+
+  // run an API action while showing a global "busy" message (saving/uploading/…)
+  const track = useCallback(async (msg, fn) => {
+    setBusy(msg)
+    try { return await fn() }
+    finally { setBusy(null) }
   }, [])
 
   // actor creds (login/userData/download) — the person performing the action
@@ -37,10 +46,12 @@ export function AppProvider({ children }) {
         const d = await call('adminData', { au: s.username, ap: s.password })
         setMasters(d.masters || [])
         setUsers(d.users || [])
+        if (d.config) setConfig(d.config)
       } else {
         const d = await call('userData', { username: s.username, password: s.password })
         setMasters(d.masters || [])
         setUsers([])
+        if (d.config) setConfig(d.config)
       }
     } catch (e) {
       notify(e.message)
@@ -82,30 +93,30 @@ export function AppProvider({ children }) {
   }, [])
 
   // ---------- masters ----------
-  const createMaster = useCallback(async (name, description) => {
+  const createMaster = useCallback((name, description) => track('กำลังบันทึก Master…', async () => {
     await call('createMaster', { ...admin(), name, description })
     await loadData()
-  }, [admin, loadData])
+  }), [admin, loadData, track])
 
-  const deleteMaster = useCallback(async (id) => {
+  const deleteMaster = useCallback((id) => track('กำลังลบ Master…', async () => {
     await call('deleteMaster', { ...admin(), id })
     await loadData()
-  }, [admin, loadData])
+  }), [admin, loadData, track])
 
-  const addFilesToMaster = useCallback(async (masterId, fileList) => {
+  const addFilesToMaster = useCallback((masterId, fileList) => track('กำลังอัปโหลดไฟล์…', async () => {
     for (const file of fileList) {
       const dataBase64 = await fileToBase64(file)
       await call('addFile', { ...admin(), masterId, name: file.name, type: file.type || 'application/octet-stream', size: file.size, dataBase64 })
     }
     await loadData()
-  }, [admin, loadData])
+  }), [admin, loadData, track])
 
-  const removeFile = useCallback(async (masterId, fileId) => {
+  const removeFile = useCallback((masterId, fileId) => track('กำลังลบไฟล์…', async () => {
     await call('removeFile', { ...admin(), id: fileId })
     await loadData()
-  }, [admin, loadData])
+  }), [admin, loadData, track])
 
-  const downloadFile = useCallback(async (fileMeta) => {
+  const downloadFile = useCallback((fileMeta) => track('กำลังเตรียมไฟล์ดาวน์โหลด…', async () => {
     try {
       const d = await call('download', { ...auth(), fileId: fileMeta.id })
       const blob = base64ToBlob(d.dataBase64, d.type)
@@ -114,33 +125,40 @@ export function AppProvider({ children }) {
       a.href = url; a.download = d.name
       document.body.appendChild(a); a.click(); a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
+      await loadData() // refresh remaining-download counts
     } catch (e) {
       notify(e.message)
     }
-  }, [auth, notify])
+  }), [auth, loadData, notify, track])
 
   // ---------- users ----------
-  const createUser = useCallback(async (data) => {
+  const createUser = useCallback((data) => track('กำลังสร้างผู้ใช้…', async () => {
     const res = await call('createUser', { ...admin(), username: data.username, password: data.password, note: data.note, allowedFileIds: data.allowedFileIds || [] })
     await loadData()
     return res
-  }, [admin, loadData])
+  }), [admin, loadData, track])
 
-  const updateUser = useCallback(async (id, patch) => {
+  const updateUser = useCallback((id, patch) => track('กำลังบันทึก…', async () => {
     await call('updateUser', { ...admin(), id, patch })
     await loadData()
-  }, [admin, loadData])
+  }), [admin, loadData, track])
 
-  const deleteUser = useCallback(async (id) => {
+  const deleteUser = useCallback((id) => track('กำลังลบผู้ใช้…', async () => {
     await call('deleteUser', { ...admin(), id })
     await loadData()
-  }, [admin, loadData])
+  }), [admin, loadData, track])
+
+  // ---------- config ----------
+  const updateConfig = useCallback((key, value) => track('กำลังบันทึกการตั้งค่า…', async () => {
+    await call('setConfig', { ...admin(), key, value })
+    await loadData()
+  }), [admin, loadData, track])
 
   const value = {
-    session, masters, users, toast, loading, apiUrl, connected: !!apiUrl, notify,
+    session, masters, users, config, toast, loading, busy, apiUrl, connected: !!apiUrl, notify,
     connect, login, logout, refresh: loadData,
     createMaster, deleteMaster, addFilesToMaster, removeFile, downloadFile,
-    createUser, updateUser, deleteUser,
+    createUser, updateUser, deleteUser, updateConfig,
     genCredentials,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

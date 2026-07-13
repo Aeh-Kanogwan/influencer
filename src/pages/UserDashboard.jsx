@@ -2,7 +2,7 @@ import { useApp } from '../context/AppContext.jsx'
 import { formatSize, formatDate, fileExt } from '../lib/format.js'
 
 export default function UserDashboard() {
-  const { session, masters, loading, downloadFile } = useApp()
+  const { session, masters, config, loading, downloadFile } = useApp()
 
   // The API already returns only the masters/files this user is allowed to download.
   const visible = masters
@@ -36,19 +36,31 @@ export default function UserDashboard() {
               </div>
               {m.description && <p className="muted body-md">{m.description}</p>}
               <div className="grid grid-auto">
-                {m.files.map((f) => (
-                  <div key={f.id} className="card stack-md">
-                    <div className="row" style={{ gap: 12 }}>
-                      <div className="file-icon">{fileExt(f.name)}</div>
-                      <div style={{ minWidth: 0 }}>
-                        <div className="label-md" style={{ wordBreak: 'break-word' }}>{f.name}</div>
-                        <div className="muted label-md">{formatSize(f.size)}</div>
+                {m.files.map((f) => {
+                  const max = f.maxDownloads ?? config.maxDownloadsPerFile ?? 3
+                  const remaining = f.remaining ?? max
+                  const exhausted = remaining <= 0
+                  return (
+                    <div key={f.id} className="card stack-md">
+                      <div className="row-between" style={{ gap: 12, alignItems: 'flex-start' }}>
+                        <div className="row" style={{ gap: 12 }}>
+                          <div className="file-icon">{fileExt(f.name)}</div>
+                          <div style={{ minWidth: 0 }}>
+                            <div className="label-md" style={{ wordBreak: 'break-word' }}>{f.name}</div>
+                            <div className="muted label-md">{formatSize(f.size)}</div>
+                          </div>
+                        </div>
+                        <span className={exhausted ? 'chip chip-off' : 'chip'}>
+                          {exhausted ? 'ครบโควตาแล้ว' : `เหลือ ${remaining}/${max}`}
+                        </span>
                       </div>
+                      <div className="muted" style={{ fontSize: 12 }}>อัปโหลด: {formatDate(f.uploadedAt)}</div>
+                      <button className="btn btn-primary btn-block" disabled={exhausted} onClick={() => downloadFile(f)}>
+                        {exhausted ? 'ดาวน์โหลดครบจำนวนแล้ว' : '⬇ ดาวน์โหลด'}
+                      </button>
                     </div>
-                    <div className="muted" style={{ fontSize: 12 }}>อัปโหลด: {formatDate(f.uploadedAt)}</div>
-                    <button className="btn btn-primary btn-block" onClick={() => downloadFile(f)}>⬇ ดาวน์โหลด</button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           ))}

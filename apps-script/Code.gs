@@ -2,10 +2,11 @@
  * ant-influencer — Google Sheets backend (Google Apps Script Web App)
  *
  * Data model (tabs in the bound spreadsheet):
- *   Config  : key | value            (adminUsername, adminPassword, driveFolderId)
- *   Users   : id | username | password | note | enabled | allowedFileIds | createdAt
- *   Masters : id | name | description | createdAt
- *   Files   : id | masterId | name | size | type | driveFileId | uploadedAt
+ *   Config    : key | value          (adminUsername, adminPassword, driveFolderId, maxDownloadsPerFile)
+ *   Users     : id | username | password | note | enabled | allowedFileIds | createdAt
+ *   Masters   : id | name | description | createdAt
+ *   Files     : id | masterId | name | size | type | driveFileId | uploadedAt
+ *   Downloads : username | fileId | count | updatedAt   (per-user, per-file download counter)
  *
  * Files themselves live in a Google Drive folder; the sheet only stores metadata.
  *
@@ -20,25 +21,39 @@ var SHEETS = {
   Users: ['id', 'username', 'password', 'note', 'enabled', 'allowedFileIds', 'createdAt'],
   Masters: ['id', 'name', 'description', 'createdAt'],
   Files: ['id', 'masterId', 'name', 'size', 'type', 'driveFileId', 'uploadedAt'],
+  Downloads: ['username', 'fileId', 'count', 'updatedAt'], // per-user, per-file download counter
 };
 
-// ---------- one-time setup ----------
+var DEFAULT_MAX_DOWNLOADS = 3;
+
+// ---------- one-time setup (idempotent — safe to re-run for migrations) ----------
 function initSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   Object.keys(SHEETS).forEach(function (name) {
     var sh = ss.getSheetByName(name) || ss.insertSheet(name);
     if (sh.getLastRow() === 0) sh.appendRow(SHEETS[name]);
   });
-  var cfg = readAll('Config');
-  if (!cfg.length) {
+  ensureConfig('adminUsername', 'admin');
+  ensureConfig('adminPassword', 'admin123');
+  ensureConfig('maxDownloadsPerFile', String(DEFAULT_MAX_DOWNLOADS));
+  if (!config().driveFolderId) {
     var folder = DriveApp.createFolder('ant-influencer-files');
-    appendRow('Config', { key: 'adminUsername', value: 'admin' });
-    appendRow('Config', { key: 'adminPassword', value: 'admin123' });
     appendRow('Config', { key: 'driveFolderId', value: folder.getId() });
   }
   // remove default empty sheet if present
   var def = ss.getSheetByName('Sheet1');
   if (def && def.getLastRow() === 0) ss.deleteSheet(def);
+}
+
+// add a Config row only if the key does not exist yet
+function ensureConfig(key, value) {
+  if (config()[key] === undefined || config()[key] === '') {
+    if (findRowIndex('Config', 'key', key) < 0) appendRow('Config', { key: key, value: value });
+  }
+}
+function maxDownloads() {
+  var v = Number(config().maxDownloadsPerFile);
+  return v > 0 ? v : DEFAULT_MAX_DOWNLOADS;
 }
 
 // ---------- HTTP entry points ----------
@@ -79,6 +94,8 @@ function route(action, b) {
     case 'createUser': requireAdmin(b); return createUser(b);
     case 'updateUser': requireAdmin(b); return updateUser(b.id, b.patch);
     case 'deleteUser': requireAdmin(b); return deleteUser(b.id);
+
+    case 'setConfig': requireAdmin(b); return setConfig(b.key, b.value);
 
     case 'download': return download(b.fileId, b.username, b.password);
     default: throw new Error('unknown action: ' + action);
@@ -133,7 +150,7 @@ function adminData() {
       createdAt: Number(u.createdAt) || 0,
     };
   }).sort(function (a, b) { return b.createdAt - a.createdAt; });
-  return { masters: composeMasters(files), users: users };
+  return { masters: composeMasters(files), users: users, config: { maxDownloadsPerFile: maxDownloads() } };
 }
 function userData(username, password) {
   var u = readAll('Users').filter(function (x) { return x.username === username && String(x.password) === String(password); })[0];
@@ -141,8 +158,18 @@ function userData(username, password) {
   if (String(u.enabled) !== 'true') throw new Error('บัญชีถูกระงับ');
   var allowed = u.allowedFileIds ? String(u.allowedFileIds).split(',').filter(Boolean) : [];
   var files = readAll('Files').filter(function (f) { return allowed.indexOf(f.id) !== -1; });
+  var max = maxDownloads();
+  var counts = downloadCounts(username);
   var masters = composeMasters(files).filter(function (m) { return m.files.length > 0; });
-  return { masters: masters, username: username };
+  // annotate each file with how many downloads are left for this user
+  masters.forEach(function (m) {
+    m.files.forEach(function (f) {
+      f.downloaded = counts[f.id] || 0;
+      f.maxDownloads = max;
+      f.remaining = Math.max(0, max - (counts[f.id] || 0));
+    });
+  });
+  return { masters: masters, username: username, config: { maxDownloadsPerFile: max } };
 }
 
 // ---------- masters ----------
@@ -193,9 +220,49 @@ function download(fileId, username, password) {
     if (!u || String(u.enabled) !== 'true') throw new Error('unauthorized');
     var allowed = u.allowedFileIds ? String(u.allowedFileIds).split(',').filter(Boolean) : [];
     if (allowed.indexOf(fileId) === -1) throw new Error('ไม่มีสิทธิ์ดาวน์โหลดไฟล์นี้');
+    // enforce per-file download limit (admins are exempt)
+    var max = maxDownloads();
+    var used = downloadCounts(username)[fileId] || 0;
+    if (used >= max) throw new Error('ดาวน์โหลดครบจำนวนที่กำหนดแล้ว (' + max + ' ครั้ง/ไฟล์)');
+    incDownload(username, fileId);
   }
   var blob = DriveApp.getFileById(f.driveFileId).getBlob();
   return { name: f.name, type: f.type, dataBase64: Utilities.base64Encode(blob.getBytes()) };
+}
+
+// ---------- download counters ----------
+function downloadCounts(username) {
+  var out = {};
+  readAll('Downloads').forEach(function (r) {
+    if (r.username === username) out[r.fileId] = Number(r.count) || 0;
+  });
+  return out;
+}
+function incDownload(username, fileId) {
+  var rows = readAll('Downloads');
+  var existing = rows.filter(function (r) { return r.username === username && r.fileId === fileId; })[0];
+  if (existing) {
+    // find its row index by matching username+fileId
+    var sh = sheet('Downloads');
+    var values = sh.getDataRange().getValues();
+    for (var i = 1; i < values.length; i++) {
+      if (String(values[i][0]) === String(username) && String(values[i][1]) === String(fileId)) {
+        sh.getRange(i + 1, 3).setValue((Number(values[i][2]) || 0) + 1);
+        sh.getRange(i + 1, 4).setValue(Date.now());
+        return;
+      }
+    }
+  }
+  appendRow('Downloads', { username: username, fileId: fileId, count: 1, updatedAt: Date.now() });
+}
+
+// ---------- config ----------
+function setConfig(key, value) {
+  var allowed = ['maxDownloadsPerFile', 'adminUsername', 'adminPassword'];
+  if (allowed.indexOf(key) === -1) throw new Error('ไม่อนุญาตให้แก้ค่านี้');
+  if (findRowIndex('Config', 'key', key) < 0) appendRow('Config', { key: key, value: value });
+  else updateRowBy('Config', 'key', key, { value: value });
+  return { key: key, value: value };
 }
 
 // ---------- users ----------
