@@ -46,6 +46,14 @@
 3. **Deploy → Manage deployments → New version**
 4. รีเฟรชเว็บ → ตั้งค่าจำนวนครั้งได้ในหน้า admin (การ์ด "จำกัดดาวน์โหลดต่อไฟล์")
 
+## ให้ทุกคนเชื่อมต่ออัตโนมัติ (ไม่ต้องวาง URL เอง)
+ค่า URL ที่วางในหน้า login ถูกเก็บใน localStorage ของ **เบราว์เซอร์คนนั้นคนเดียว** — คนอื่นที่เปิดลิงก์จึงต้องวาง URL ใหม่ ให้ฝัง URL ไว้กับตัวแอปแทน ผ่าน Vercel:
+1. Vercel → เลือกโปรเจกต์ → **Settings → Environment Variables**
+2. เพิ่มตัวแปร: **Key** = `VITE_API_URL` , **Value** = URL Apps Script (`.../exec`) , Environments: เลือกครบ (Production/Preview/Development)
+3. **Save** → ไปแท็บ **Deployments → ⋯ ที่ตัวล่าสุด → Redeploy** (env var ฝังตอน build ต้อง deploy ใหม่)
+4. เปิดเว็บด้วยลิงก์ปกติ → ทุกคนจะเข้าหน้า login ได้เลย ไม่มีหน้าให้วาง URL อีก
+> หมายเหตุ: repo เป็น public ทำให้ URL ถูกมองเห็นได้ ควรเปลี่ยนรหัส admin จากค่าเริ่มต้น และพิจารณาทำ repo เป็น private
+
 ## แก้ปัญหา (Troubleshooting)
 - **ขึ้น `unauthorized` ตอนสร้าง user / อัปโหลดไฟล์:** โค้ด Apps Script ที่รันอยู่ยังเป็นเวอร์ชันเก่า
   1. วางโค้ด `Code.gs` ล่าสุด (ฟังก์ชัน `requireAdmin` ต้องเช็ค `b.au` ไม่ใช่ `b.username`) → Save
