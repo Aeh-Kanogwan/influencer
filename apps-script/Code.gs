@@ -98,6 +98,7 @@ function route(action, b) {
     case 'setConfig': requireAdmin(b); return setConfig(b.key, b.value);
 
     case 'download': return download(b.fileId, b.username, b.password);
+    case 'getFileLink': return getFileLink(b.fileId, b.username, b.password);
     default: throw new Error('unknown action: ' + action);
   }
 }
@@ -210,7 +211,8 @@ function removeFile(id) {
   });
   return { deleted: id };
 }
-function download(fileId, username, password) {
+// shared permission + download-limit check (admins exempt); increments the counter for users
+function enforceDownload(fileId, username, password) {
   var f = readAll('Files').filter(function (x) { return x.id === fileId; })[0];
   if (!f) throw new Error('ไม่พบไฟล์');
   var c = config();
@@ -220,14 +222,25 @@ function download(fileId, username, password) {
     if (!u || String(u.enabled) !== 'true') throw new Error('unauthorized');
     var allowed = u.allowedFileIds ? String(u.allowedFileIds).split(',').filter(Boolean) : [];
     if (allowed.indexOf(fileId) === -1) throw new Error('ไม่มีสิทธิ์ดาวน์โหลดไฟล์นี้');
-    // enforce per-file download limit (admins are exempt)
     var max = maxDownloads();
     var used = downloadCounts(username)[fileId] || 0;
     if (used >= max) throw new Error('ดาวน์โหลดครบจำนวนที่กำหนดแล้ว (' + max + ' ครั้ง/ไฟล์)');
     incDownload(username, fileId);
   }
+  return f;
+}
+function download(fileId, username, password) {
+  var f = enforceDownload(fileId, username, password);
   var blob = DriveApp.getFileById(f.driveFileId).getBlob();
   return { name: f.name, type: f.type, dataBase64: Utilities.base64Encode(blob.getBytes()) };
+}
+// return a Google Drive link (shared: anyone-with-link can view) so the customer
+// can open it and "Save to my Drive" / open with Google Sheets themselves
+function getFileLink(fileId, username, password) {
+  var f = enforceDownload(fileId, username, password);
+  var file = DriveApp.getFileById(f.driveFileId);
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
+  return { name: f.name, url: file.getUrl() };
 }
 
 // ---------- download counters ----------

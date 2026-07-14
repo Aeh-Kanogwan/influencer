@@ -131,6 +131,20 @@ export function AppProvider({ children }) {
     }
   }), [auth, loadData, notify, track])
 
+  // open the file in Google Drive so the customer can save it to their own Drive / open with Google Sheets
+  const openFileLink = useCallback((fileMeta) => track('กำลังเปิดไฟล์ใน Google Drive…', async () => {
+    const win = window.open('', '_blank') // open synchronously (user gesture) to dodge popup blockers
+    try {
+      const d = await call('getFileLink', { ...auth(), fileId: fileMeta.id })
+      if (win) win.location.href = d.url
+      else window.open(d.url, '_blank')
+      await loadData() // refresh remaining count
+    } catch (e) {
+      if (win) win.close()
+      notify(e.message)
+    }
+  }), [auth, loadData, notify, track])
+
   // ---------- users ----------
   const createUser = useCallback((data) => track('กำลังสร้างผู้ใช้…', async () => {
     const res = await call('createUser', { ...admin(), username: data.username, password: data.password, note: data.note, allowedFileIds: data.allowedFileIds || [] })
@@ -157,7 +171,7 @@ export function AppProvider({ children }) {
   const value = {
     session, masters, users, config, toast, loading, busy, apiUrl, connected: !!apiUrl, notify,
     connect, login, logout, refresh: loadData,
-    createMaster, deleteMaster, addFilesToMaster, removeFile, downloadFile,
+    createMaster, deleteMaster, addFilesToMaster, removeFile, downloadFile, openFileLink,
     createUser, updateUser, deleteUser, updateConfig,
     genCredentials,
   }

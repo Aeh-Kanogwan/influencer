@@ -2,7 +2,7 @@ import { useApp } from '../context/AppContext.jsx'
 import { formatSize, formatDate, fileExt } from '../lib/format.js'
 
 export default function UserDashboard() {
-  const { session, masters, config, loading, downloadFile } = useApp()
+  const { session, masters, config, loading, openFileLink } = useApp()
 
   // The API already returns only the masters/files this user is allowed to download.
   const visible = masters
@@ -55,9 +55,10 @@ export default function UserDashboard() {
                         </span>
                       </div>
                       <div className="muted" style={{ fontSize: 12 }}>อัปโหลด: {formatDate(f.uploadedAt)}</div>
-                      <button className="btn btn-primary btn-block" disabled={exhausted} onClick={() => downloadFile(f)}>
-                        {exhausted ? 'ดาวน์โหลดครบจำนวนแล้ว' : '⬇ ดาวน์โหลด'}
+                      <button className="btn btn-primary btn-block" disabled={exhausted} onClick={() => openFileLink(f)}>
+                        {exhausted ? 'ครบจำนวนแล้ว' : '📂 เปิดใน Google Drive'}
                       </button>
+                      <div className="muted" style={{ fontSize: 12, textAlign: 'center' }}>เปิดแล้วกด “เพิ่มไปที่ไดรฟ์” หรือ “เปิดด้วย Google Sheets”</div>
                     </div>
                   )
                 })}
