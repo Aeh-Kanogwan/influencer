@@ -134,14 +134,21 @@ export function AppProvider({ children }) {
   // open the file in Google Drive so the customer can save it to their own Drive / open with Google Sheets
   const openFileLink = useCallback((fileMeta) => track('กำลังเปิดไฟล์ใน Google Drive…', async () => {
     const win = window.open('', '_blank') // open synchronously (user gesture) to dodge popup blockers
+    // show a placeholder so the new tab is never a mysterious blank/white page
+    const writeMsg = (html) => {
+      if (!win || win.closed) return
+      try { win.document.open(); win.document.write(`<!doctype html><meta charset="utf-8"><body style="font-family:system-ui,sans-serif;padding:32px;color:#1a1c1c">${html}</body>`); win.document.close() } catch { /* cross-origin after nav */ }
+    }
+    writeMsg('กำลังเปิดไฟล์จาก Google Drive…')
     try {
       const d = await call('getFileLink', { ...auth(), fileId: fileMeta.id })
-      if (win) win.location.href = d.url
+      if (!d || !d.url) throw new Error('ไม่ได้รับลิงก์ไฟล์จากเซิร์ฟเวอร์ (ตรวจว่า Apps Script deploy เวอร์ชันล่าสุดแล้ว)')
+      if (win && !win.closed) win.location.href = d.url
       else window.open(d.url, '_blank')
       await loadData() // refresh remaining count
     } catch (e) {
-      if (win) win.close()
-      notify(e.message)
+      writeMsg(`<b style="color:#ba1a1a">เปิดไฟล์ไม่สำเร็จ</b><br><br>${e.message}<br><br><span style="color:#514442">ปิดแท็บนี้แล้วลองใหม่ได้</span>`)
+      notify('เปิดไฟล์ไม่สำเร็จ: ' + e.message)
     }
   }), [auth, loadData, notify, track])
 
