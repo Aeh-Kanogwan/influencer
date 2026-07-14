@@ -5,25 +5,30 @@ import PermissionModal from './PermissionModal.jsx'
 
 export default function UsersTab() {
   const { users, masters, loading, createUser, updateUser, deleteUser, genCredentials, notify } = useApp()
-  const [prefix, setPrefix] = useState('user')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [note, setNote] = useState('')
+  const [formErr, setFormErr] = useState('')
   const [lastCreated, setLastCreated] = useState(null)
   const [permTarget, setPermTarget] = useState(null)
 
   const [busy, setBusy] = useState(false)
 
-  const handleGen = async (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault()
-    setBusy(true)
+    const uname = username.trim()
+    if (!uname) { setFormErr('กรุณากรอกชื่อผู้ใช้'); return }
+    if (!password) { setFormErr('กรุณากรอกรหัสผ่าน'); return }
+    if (users.some((u) => u.username === uname)) { setFormErr('ชื่อผู้ใช้นี้ถูกใช้แล้ว กรุณาใช้ชื่ออื่น'); return }
+    setFormErr(''); setBusy(true)
     try {
-      const creds = genCredentials(prefix.trim() || 'user')
-      const u = await createUser({ ...creds, note, allowedFileIds: [] })
-      setLastCreated({ ...creds })
-      setNote('')
-      notify('สร้างผู้ใช้ใหม่พร้อม username/password แล้ว')
+      const u = await createUser({ username: uname, password, note, allowedFileIds: [] })
+      setLastCreated({ username: uname, password })
+      setUsername(''); setPassword(''); setNote('')
+      notify('สร้างผู้ใช้ใหม่แล้ว')
       setPermTarget(u) // open permission editor right away
     } catch (err) {
-      notify('สร้างผู้ใช้ไม่สำเร็จ: ' + err.message)
+      setFormErr(err.message)
     } finally {
       setBusy(false)
     }
@@ -44,20 +49,28 @@ export default function UsersTab() {
 
   return (
     <div className="grid grid-2" style={{ alignItems: 'start' }}>
-      {/* Generate user */}
+      {/* Create user */}
       <div className="card stack-md">
-        <h3 className="headline-md">สร้างผู้ใช้ (Gen U/P)</h3>
-        <p className="muted body-md">ระบบจะสุ่ม username และ password ให้อัตโนมัติ แล้วนำไปกำหนดสิทธิ์ไฟล์ได้ทันที</p>
-        <form className="stack-md" onSubmit={handleGen}>
+        <h3 className="headline-md">สร้างผู้ใช้</h3>
+        <p className="muted body-md">ตั้งชื่อผู้ใช้และรหัสผ่านเองได้ (ชื่อผู้ใช้ห้ามซ้ำ) แล้วนำไปกำหนดสิทธิ์ไฟล์ได้ทันที</p>
+        <form className="stack-md" onSubmit={handleCreate}>
           <div className="field">
-            <label>คำนำหน้า username</label>
-            <input className="input" value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="user" />
+            <label>ชื่อผู้ใช้ (Username) — ห้ามซ้ำ</label>
+            <input className="input" value={username} onChange={(e) => { setUsername(e.target.value); setFormErr('') }} placeholder="เช่น somchai, customer-a" />
+          </div>
+          <div className="field">
+            <label>รหัสผ่าน (Password)</label>
+            <div className="row" style={{ gap: 8 }}>
+              <input className="input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="ตั้งรหัสผ่าน" style={{ flex: 1 }} />
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPassword(genCredentials().password)}>สุ่ม</button>
+            </div>
           </div>
           <div className="field">
             <label>บันทึกช่วยจำ (ไม่บังคับ)</label>
             <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="เช่น ลูกค้า A, ฝ่ายบัญชี" />
           </div>
-          <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? 'กำลังสร้าง…' : '⚡ สร้าง & สุ่ม U/P'}</button>
+          {formErr && <div className="error-text">{formErr}</div>}
+          <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? 'กำลังสร้าง…' : '+ สร้างผู้ใช้'}</button>
         </form>
 
         {lastCreated && (

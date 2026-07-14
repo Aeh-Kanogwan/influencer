@@ -267,8 +267,16 @@ function setConfig(key, value) {
 
 // ---------- users ----------
 function createUser(b) {
+  var uname = String(b.username || '').trim();
+  if (!uname) throw new Error('กรุณาระบุชื่อผู้ใช้');
+  if (!b.password) throw new Error('กรุณาระบุรหัสผ่าน');
+  // username must be unique (and not clash with the admin account)
+  if (uname === config().adminUsername) throw new Error('ชื่อผู้ใช้นี้ถูกใช้แล้ว');
+  if (readAll('Users').some(function (x) { return String(x.username) === uname; })) {
+    throw new Error('ชื่อผู้ใช้นี้ถูกใช้แล้ว');
+  }
   var u = {
-    id: uid('usr'), username: b.username, password: b.password, note: b.note || '',
+    id: uid('usr'), username: uname, password: b.password, note: b.note || '',
     enabled: true, allowedFileIds: (b.allowedFileIds || []).join(','), createdAt: Date.now(),
   };
   appendRow('Users', u);
